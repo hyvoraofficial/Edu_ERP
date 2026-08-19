@@ -1,0 +1,1020 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Academy {
+  id            String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name          String         @db.VarChar(255)
+  subdomain     String         @unique @db.VarChar(100)
+  domain        String?        @unique @db.VarChar(255)
+  status        String         @default("active") @db.VarChar(50)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime       @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt     DateTime?      @map("deleted_at") @db.Timestamptz
+
+  users                    User[]
+  roles                    Role[]
+  students                 Student[]
+  batches                  Batch[]
+  settings                 AcademySetting?
+  subscriptions            Subscription[]
+  teachers                 Teacher[]
+  teacherLeaves            TeacherLeave[]
+  courses                  Course[]
+  subjects                 Subject[]
+  classSchedules           ClassSchedule[]
+  studentAttendance        Attendance[]
+  studentAttendanceRecords AttendanceRecord[]
+  teacherAttendance        TeacherAttendance[]
+  feeStructures            FeeStructure[]
+  feeAllocations           FeeAllocation[]
+  paymentTransactions      PaymentTransaction[]
+  payments                 Payment[]
+  studyMaterials           StudyMaterial[]
+  studyMaterialBatches     StudyMaterialBatch[]
+  videoLectures            VideoLecture[]
+  videoLectureBatches      VideoLectureBatch[]
+  assignments              Assignment[]
+  assignmentSubmissions    AssignmentSubmission[]
+  exams                    Exam[]
+  examPapers               ExamPaper[]
+  examResults              ExamResult[]
+  notifications            Notification[]
+  notificationTemplates    NotificationTemplate[]
+  websitePages             WebsitePage[]
+  galleryAlbums            GalleryAlbum[]
+  galleryImages            GalleryImage[]
+  testimonials             Testimonial[]
+  contactEnquiries         ContactEnquiry[]
+  admissionEnquiries       AdmissionEnquiry[]
+  dashboardCaches          DashboardCache[]
+  mediaFiles               MediaFile[]
+  branches                 Branch[]
+  teacherSubjects          TeacherSubject[]
+
+  @@map("academies")
+}
+
+model User {
+  id                 String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId          String     @map("academy_id") @db.Uuid
+  email              String     @db.VarChar(255)
+  passwordHash       String     @map("password_hash") @db.VarChar(255)
+  initialPassword    String?    @map("initial_password") @db.VarChar(255)
+  firstName          String     @map("first_name") @db.VarChar(150)
+  lastName           String     @map("last_name") @db.VarChar(150)
+  phone              String?    @db.VarChar(50)
+  avatarId           String?    @map("avatar_id") @db.Uuid
+  status             String     @default("active") @db.VarChar(50)
+  refreshToken       String?    @map("refresh_token") @db.Text
+  verificationToken  String?    @map("verification_token") @db.VarChar(255)
+  isEmailVerified    Boolean    @default(false) @map("is_email_verified")
+  isDefaultPassword  Boolean    @default(true) @map("is_default_password")
+  resetPasswordToken String?    @map("reset_password_token") @db.VarChar(255)
+  resetPasswordExpires DateTime? @map("reset_password_expires") @db.Timestamptz
+  lastLoginAt        DateTime?  @map("last_login_at") @db.Timestamptz
+  createdAt          DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime   @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt          DateTime?  @map("deleted_at") @db.Timestamptz
+
+  academy            Academy    @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  student            Student?
+  teacher            Teacher?
+  userRoles          UserRole[]
+  recordedPayments   Payment[]
+  gradedSubmissions  AssignmentSubmission[] @relation("gradedSubmissions")
+  gradedExamResults  ExamResult[]           @relation("gradedExamResults")
+  notifications      Notification[]
+  resolvedEnquiries  ContactEnquiry[]
+  uploadedFiles      MediaFile[]
+  loginActivities    LoginActivity[]
+
+  @@unique([academyId, email], name: "uq_users_academy_email")
+  @@map("users")
+}
+
+model Role {
+  id          String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId   String?          @map("academy_id") @db.Uuid
+  name        String           @db.VarChar(100)
+  code        String           @db.VarChar(100)
+  description String?
+  isSystem    Boolean          @default(false) @map("is_system")
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime         @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime?        @map("deleted_at") @db.Timestamptz
+
+  academy     Academy?         @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  userRoles   UserRole[]
+  permissions RolePermission[]
+
+  @@unique([academyId, code], name: "uq_roles_academy_code")
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String           @unique @db.VarChar(100)
+  code        String           @unique @db.VarChar(100)
+  description String?
+  resource    String           @db.VarChar(100)
+  action      String           @db.VarChar(50)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime         @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime?        @map("deleted_at") @db.Timestamptz
+
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId    String     @map("academy_id") @db.Uuid
+  roleId       String     @map("role_id") @db.Uuid
+  permissionId String     @map("permission_id") @db.Uuid
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime   @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime?  @map("deleted_at") @db.Timestamptz
+
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId], name: "uq_role_permission")
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId String    @map("academy_id") @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  roleId    String    @map("role_id") @db.Uuid
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId], name: "uq_user_role")
+  @@map("user_roles")
+}
+
+model Branch {
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId     String    @map("academy_id") @db.Uuid
+  name          String    @db.VarChar(255)
+  code          String    @db.VarChar(100)
+  address       String    @db.Text
+  city          String    @db.VarChar(100)
+  state         String    @db.VarChar(100)
+  pincode       String    @db.VarChar(20)
+  contactNumber String    @map("contact_number") @db.VarChar(50)
+  email         String    @db.VarChar(255)
+  managerId     String?   @map("manager_id") @db.Uuid
+  status        String    @default("active") @db.VarChar(50)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy       Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  courses       Course[]
+  batches       Batch[]
+  students      Student[]
+  teachers      Teacher[]
+  teacherSubjects TeacherSubject[]
+
+  @@unique([academyId, name], name: "uq_branches_name")
+  @@unique([academyId, code], name: "uq_branches_code")
+  @@map("branches")
+}
+
+model Student {
+  id              String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId       String         @map("academy_id") @db.Uuid
+  branchId        String         @map("branch_id") @db.Uuid
+  userId          String         @unique @map("user_id") @db.Uuid
+  courseId        String         @map("course_id") @db.Uuid
+  batchId         String         @map("batch_id") @db.Uuid
+  admissionNumber String         @map("admission_number") @db.VarChar(100)
+  admissionDate   DateTime       @default(now()) @map("admission_date") @db.Date
+  dateOfBirth     DateTime       @map("date_of_birth") @db.Date
+  gender          String?        @db.VarChar(50)
+  bloodGroup      String?        @map("blood_group") @db.VarChar(20)
+  parentName      String         @map("parent_name") @db.VarChar(255)
+  parentPhone     String         @map("parent_phone") @db.VarChar(50)
+  parentEmail     String?        @map("parent_email") @db.VarChar(255)
+  fatherName      String?        @map("father_name") @db.VarChar(255)
+  motherName      String?        @map("mother_name") @db.VarChar(255)
+  rollNumber      String?        @map("roll_number") @db.VarChar(100)
+  feePlan         String?        @map("fee_plan") @db.VarChar(100)
+  studentPhotoId  String?        @map("student_photo_id") @db.Uuid
+  aadhaarId       String?        @map("aadhaar_id") @db.Uuid
+  previousMarksCardId String?    @map("previous_marks_card_id") @db.Uuid
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime       @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt       DateTime?      @map("deleted_at") @db.Timestamptz
+
+  academy               Academy            @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  branch                Branch             @relation(fields: [branchId], references: [id])
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course                Course             @relation(fields: [courseId], references: [id])
+  batch                 Batch              @relation(fields: [batchId], references: [id])
+  studentPhoto          MediaFile?         @relation("studentPhoto", fields: [studentPhotoId], references: [id])
+  aadhaar               MediaFile?         @relation("aadhaar", fields: [aadhaarId], references: [id])
+  previousMarksCard    MediaFile?         @relation("previousMarksCard", fields: [previousMarksCardId], references: [id])
+  attendanceRecords     AttendanceRecord[]
+  feeAllocations        FeeAllocation[]
+  assignmentSubmissions AssignmentSubmission[]
+  examResults           ExamResult[]
+
+  @@unique([academyId, admissionNumber], name: "uq_students_academy_admission_number")
+  @@map("students")
+}
+
+model Batch {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId   String    @map("academy_id") @db.Uuid
+  branchId    String    @map("branch_id") @db.Uuid
+  courseId    String    @map("course_id") @db.Uuid
+  name        String    @db.VarChar(255)
+  code        String    @db.VarChar(100)
+  startDate   DateTime  @map("start_date") @db.Date
+  endDate     DateTime  @map("end_date") @db.Date
+  capacity    Int?      @map("capacity")
+  status      String    @default("active") @db.VarChar(50)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy              Academy              @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  branch               Branch               @relation(fields: [branchId], references: [id])
+  course               Course               @relation(fields: [courseId], references: [id])
+  students             Student[]
+  schedules            ClassSchedule[]
+  attendance           Attendance[]
+  studyMaterialBatches StudyMaterialBatch[]
+  videoLectureBatches  VideoLectureBatch[]
+  assignments          Assignment[]
+  examPapers           ExamPaper[]
+  teacherSubjects      TeacherSubject[]
+
+  @@unique([branchId, code], name: "uq_batches_branch_code")
+  @@map("batches")
+}
+
+model AcademySetting {
+  id                 String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId          String     @unique @map("academy_id") @db.Uuid
+  logoId             String?    @map("logo_id") @db.Uuid
+  faviconId          String?    @map("favicon_id") @db.Uuid
+  primaryColor       String?    @map("primary_color") @db.VarChar(50)
+  secondaryColor     String?    @map("secondary_color") @db.VarChar(50)
+  address            String?
+  phone              String?    @db.VarChar(50)
+  email              String?    @db.VarChar(255)
+  timezone           String     @default("UTC") @db.VarChar(100)
+  currency           String     @default("USD") @db.VarChar(50)
+  theme              String     @default("light") @db.VarChar(50)
+  smtpSettings       Json?      @map("smtp_settings")
+  paymentGatewayKeys Json?      @map("payment_gateway_keys")
+  socialLinks        Json?      @map("social_links")
+  seoSettings        Json?      @map("seo_settings")
+  createdAt          DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime   @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt          DateTime?  @map("deleted_at") @db.Timestamptz
+
+  academy            Academy    @relation(fields: [academyId], references: [id], onDelete: Cascade)
+
+  @@map("academy_settings")
+}
+
+model Subscription {
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId    String    @map("academy_id") @db.Uuid
+  planName     String    @map("plan_name") @db.VarChar(100)
+  status       String    @default("active") @db.VarChar(50)
+  price        Decimal   @db.Decimal(10, 2)
+  billingCycle String    @map("billing_cycle") @db.VarChar(50)
+  startsAt     DateTime  @map("starts_at") @db.Timestamptz
+  endsAt       DateTime  @map("ends_at") @db.Timestamptz
+  trialEndsAt  DateTime? @map("trial_ends_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy      Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model Teacher {
+  id              String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId       String         @map("academy_id") @db.Uuid
+  branchId        String?        @map("branch_id") @db.Uuid
+  userId          String         @unique @map("user_id") @db.Uuid
+  employeeNumber  String         @map("employee_number") @db.VarChar(100)
+  designation     String?        @db.VarChar(100)
+  qualification   String?        @db.VarChar(255)
+  joiningDate     DateTime       @default(now()) @map("joining_date") @db.Date
+  salaryStructure Json?          @map("salary_structure")
+  status          String         @default("active") @db.VarChar(50)
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime       @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt       DateTime?      @map("deleted_at") @db.Timestamptz
+
+  academy           Academy             @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  branch            Branch?             @relation(fields: [branchId], references: [id])
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leaves            TeacherLeave[]
+  schedules         ClassSchedule[]
+  studentAttendance Attendance[]
+  teacherAttendance TeacherAttendance[]
+  studyMaterials    StudyMaterial[]
+  videoLectures     VideoLecture[]
+  assignments       Assignment[]
+  teacherSubjects   TeacherSubject[]
+
+  @@unique([academyId, employeeNumber], name: "uq_teachers_academy_employee_number")
+  @@map("teachers")
+}
+
+model TeacherLeave {
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId    String    @map("academy_id") @db.Uuid
+  teacherId    String    @map("teacher_id") @db.Uuid
+  leaveType    String    @map("leave_type") @db.VarChar(100)
+  startsAt     DateTime  @map("starts_at") @db.Date
+  endsAt       DateTime  @map("ends_at") @db.Date
+  status       String    @default("pending") @db.VarChar(50)
+  reason       String?   @db.Text
+  approvedById String?   @map("approved_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy      Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  teacher      Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@map("teacher_leaves")
+}
+
+model Course {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId   String    @map("academy_id") @db.Uuid
+  branchId    String    @map("branch_id") @db.Uuid
+  name        String    @db.VarChar(255)
+  code        String    @db.VarChar(100)
+  description String?
+  syllabusId  String?   @map("syllabus_id") @db.Uuid
+  status      String    @default("active") @db.VarChar(50)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+  duration    String?   @db.VarChar(100)
+
+  academy            Academy            @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  branch             Branch             @relation(fields: [branchId], references: [id])
+  subjects           Subject[]
+  students           Student[]
+  admissionEnquiries AdmissionEnquiry[]
+  batches            Batch[]
+  teacherSubjects    TeacherSubject[]
+
+  @@unique([branchId, code], name: "uq_courses_branch_code")
+  @@unique([branchId, name], name: "uq_courses_branch_name")
+  @@map("courses")
+}
+
+model Subject {
+  id          String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId   String          @map("academy_id") @db.Uuid
+  courseId    String          @map("course_id") @db.Uuid
+  name        String          @db.VarChar(255)
+  code        String          @db.VarChar(100)
+  description String?
+  subjectType String          @default("theory") @map("subject_type") @db.VarChar(50)
+  status      String          @default("active") @db.VarChar(50)
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime        @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime?       @map("deleted_at") @db.Timestamptz
+
+  academy        Academy         @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  course         Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  schedules      ClassSchedule[]
+  studyMaterials StudyMaterial[]
+  videoLectures  VideoLecture[]
+  assignments    Assignment[]
+  examPapers     ExamPaper[]
+  attendance      Attendance[]
+  teacherSubjects TeacherSubject[]
+
+  @@unique([courseId, code], name: "uq_subjects_course_code")
+  @@unique([courseId, name], name: "uq_subjects_course_name")
+  @@map("subjects")
+}
+
+model ClassSchedule {
+  id        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId String    @map("academy_id") @db.Uuid
+  batchId   String    @map("batch_id") @db.Uuid
+  subjectId String    @map("subject_id") @db.Uuid
+  teacherId String    @map("teacher_id") @db.Uuid
+  dayOfWeek String    @map("day_of_week") @db.VarChar(50)
+  startTime String    @map("start_time") @db.VarChar(50)
+  endTime   String    @map("end_time") @db.VarChar(50)
+  room      String?   @db.VarChar(100)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy   Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  batch     Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  subject   Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher   Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@map("class_schedules")
+}
+
+model Attendance {
+  id        String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId String             @map("academy_id") @db.Uuid
+  batchId   String             @map("batch_id") @db.Uuid
+  subjectId String?            @map("subject_id") @db.Uuid
+  teacherId String             @map("teacher_id") @db.Uuid
+  date      DateTime           @db.Date
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime           @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime?          @map("deleted_at") @db.Timestamptz
+
+  academy   Academy            @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  batch     Batch              @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  teacher   Teacher            @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject   Subject?           @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  records   AttendanceRecord[]
+
+  @@unique([batchId, date, subjectId], name: "uq_attendance_session")
+  @@map("attendance")
+}
+
+model AttendanceRecord {
+  id           String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId    String     @map("academy_id") @db.Uuid
+  attendanceId String     @map("attendance_id") @db.Uuid
+  studentId    String     @map("student_id") @db.Uuid
+  status       String     @default("present") @db.VarChar(50)
+  remarks      String?    @db.VarChar(255)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime   @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime?  @map("deleted_at") @db.Timestamptz
+
+  academy      Academy    @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  attendance   Attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([attendanceId, studentId], name: "uq_attendance_record")
+  @@map("attendance_records")
+}
+
+model TeacherAttendance {
+  id        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId String    @map("academy_id") @db.Uuid
+  teacherId String    @map("teacher_id") @db.Uuid
+  date      DateTime  @db.Date
+  status    String    @default("present") @db.VarChar(50)
+  remarks   String?   @db.VarChar(255)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy   Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  teacher   Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, date], name: "uq_teacher_attendance")
+  @@map("teacher_attendance")
+}
+
+model FeeStructure {
+  id          String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId   String          @map("academy_id") @db.Uuid
+  name        String          @db.VarChar(255)
+  description String?
+  amount      Decimal         @db.Decimal(12, 2)
+  frequency   String          @default("one_time") @db.VarChar(50)
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime        @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime?       @map("deleted_at") @db.Timestamptz
+
+  academy     Academy         @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  allocations FeeAllocation[]
+
+  @@map("fee_structures")
+}
+
+model FeeAllocation {
+  id             String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId      String               @map("academy_id") @db.Uuid
+  feeStructureId String               @map("fee_structure_id") @db.Uuid
+  studentId      String               @map("student_id") @db.Uuid
+  dueDate        DateTime             @map("due_date") @db.Date
+  status         String               @default("unpaid") @db.VarChar(50)
+  totalAmount    Decimal              @map("total_amount") @db.Decimal(12, 2)
+  paidAmount     Decimal              @default(0.00) @map("paid_amount") @db.Decimal(12, 2)
+  discountAmount Decimal              @default(0.00) @map("discount_amount") @db.Decimal(12, 2)
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime             @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt      DateTime?            @map("deleted_at") @db.Timestamptz
+
+  academy        Academy              @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  feeStructure   FeeStructure         @relation(fields: [feeStructureId], references: [id], onDelete: Cascade)
+  student        Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  transactions   PaymentTransaction[]
+  payments       Payment[]
+
+  @@map("fee_allocations")
+}
+
+model PaymentTransaction {
+  id                    String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId             String    @map("academy_id") @db.Uuid
+  feeAllocationId       String    @map("fee_allocation_id") @db.Uuid
+  amount                Decimal   @db.Decimal(12, 2)
+  currency              String    @default("INR") @db.VarChar(10)
+  paymentMethod         String?   @map("payment_method") @db.VarChar(100)
+  gatewayProvider       String?   @map("gateway_provider") @db.VarChar(100)
+  gatewayOrderId        String?   @map("gateway_order_id") @db.VarChar(255)
+  gatewayTransactionRef String?   @map("gateway_transaction_ref") @db.VarChar(255)
+  status                String    @default("pending") @db.VarChar(50)
+  failureReason         String?   @map("failure_reason") @db.Text
+  gatewayResponse       Json      @default("{}") @map("gateway_response")
+  retryCount            Int       @default(0) @map("retry_count")
+  ipAddress             String?   @map("ip_address") @db.VarChar(45)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt             DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy               Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  feeAllocation         FeeAllocation @relation(fields: [feeAllocationId], references: [id], onDelete: Cascade)
+  payments              Payment[]
+
+  @@map("payment_transactions")
+}
+
+model Payment {
+  id                   String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId            String             @map("academy_id") @db.Uuid
+  feeAllocationId      String             @map("fee_allocation_id") @db.Uuid
+  paymentTransactionId String?            @map("payment_transaction_id") @db.Uuid
+  amountPaid           Decimal            @map("amount_paid") @db.Decimal(12, 2)
+  paymentDate          DateTime           @default(now()) @map("payment_date") @db.Timestamptz
+  receiptNumber        String             @map("receipt_number") @db.VarChar(100)
+  paymentMode          String             @map("payment_mode") @db.VarChar(100)
+  referenceNo          String?            @map("reference_no") @db.VarChar(255)
+  remarks              String?            @db.Text
+  recordedBy           String?            @map("recorded_by") @db.Uuid
+  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime           @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt            DateTime?          @map("deleted_at") @db.Timestamptz
+
+  academy              Academy            @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  feeAllocation        FeeAllocation      @relation(fields: [feeAllocationId], references: [id], onDelete: Cascade)
+  paymentTransaction   PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id], onDelete: SetNull)
+  recorder             User?              @relation(fields: [recordedBy], references: [id], onDelete: SetNull)
+
+  @@unique([academyId, receiptNumber], name: "uq_payments_receipt_number")
+  @@map("payments")
+}
+
+model StudyMaterial {
+  id          String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId   String               @map("academy_id") @db.Uuid
+  title       String               @db.VarChar(255)
+  description String?
+  subjectId    String?              @map("subject_id") @db.Uuid
+  teacherId    String?              @map("teacher_id") @db.Uuid
+  mediaFileId  String?              @map("media_file_id") @db.Uuid
+  materialType String               @default("pdf") @map("material_type") @db.VarChar(50)
+  url          String?              @db.VarChar(1024)
+  accessLevel  String               @default("batch_only") @map("access_level") @db.VarChar(50)
+  createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime             @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime?            @map("deleted_at") @db.Timestamptz
+
+  academy     Academy              @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  subject     Subject?             @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  teacher     Teacher?             @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  mediaFile   MediaFile?           @relation(fields: [mediaFileId], references: [id], onDelete: SetNull)
+  batches     StudyMaterialBatch[]
+
+  @@map("study_materials")
+}
+
+model StudyMaterialBatch {
+  id              String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId       String        @map("academy_id") @db.Uuid
+  studyMaterialId String        @map("study_material_id") @db.Uuid
+  batchId         String        @map("batch_id") @db.Uuid
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime      @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt       DateTime?     @map("deleted_at") @db.Timestamptz
+
+  academy         Academy       @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  studyMaterial   StudyMaterial @relation(fields: [studyMaterialId], references: [id], onDelete: Cascade)
+  batch           Batch         @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@unique([studyMaterialId, batchId], name: "uq_study_material_batch")
+  @@map("study_material_batches")
+}
+
+model VideoLecture {
+  id                String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId         String              @map("academy_id") @db.Uuid
+  title             String              @db.VarChar(255)
+  description       String?
+  subjectId         String?             @map("subject_id") @db.Uuid
+  teacherId         String?             @map("teacher_id") @db.Uuid
+  mediaFileId       String?             @map("media_file_id") @db.Uuid
+  externalVideoUrl  String?             @map("external_video_url") @db.VarChar(512)
+  videoProvider     String              @default("youtube") @map("video_provider") @db.VarChar(50)
+  thumbnailId       String?             @map("thumbnail_id") @db.Uuid
+  durationSeconds   Int?                @map("duration_seconds")
+  accessLevel       String              @default("batch_only") @map("access_level") @db.VarChar(50)
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime            @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt         DateTime?           @map("deleted_at") @db.Timestamptz
+
+  academy           Academy             @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  subject           Subject?            @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  teacher           Teacher?            @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  batches           VideoLectureBatch[]
+
+  @@map("video_lectures")
+}
+
+model VideoLectureBatch {
+  id             String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId      String       @map("academy_id") @db.Uuid
+  videoLectureId String       @map("video_lecture_id") @db.Uuid
+  batchId        String       @map("batch_id") @db.Uuid
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime     @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt      DateTime?    @map("deleted_at") @db.Timestamptz
+
+  academy        Academy      @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  videoLecture   VideoLecture @relation(fields: [videoLectureId], references: [id], onDelete: Cascade)
+  batch          Batch        @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@unique([videoLectureId, batchId], name: "uq_video_lecture_batch")
+  @@map("video_lecture_batches")
+}
+
+model Assignment {
+  id          String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId   String                 @map("academy_id") @db.Uuid
+  batchId     String                 @map("batch_id") @db.Uuid
+  subjectId   String                 @map("subject_id") @db.Uuid
+  teacherId   String                 @map("teacher_id") @db.Uuid
+  title       String                 @db.VarChar(255)
+  description String?
+  maxMarks    Decimal                @map("max_marks") @db.Decimal(6, 2)
+  dueDate     DateTime               @map("due_date") @db.Timestamptz
+  mediaFileId String?                @map("media_file_id") @db.Uuid
+  createdAt   DateTime               @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime               @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime?              @map("deleted_at") @db.Timestamptz
+
+  academy     Academy                @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  batch       Batch                  @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  subject     Subject                @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher     Teacher                @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  submissions AssignmentSubmission[]
+
+  @@map("assignments")
+}
+
+model AssignmentSubmission {
+  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId      String    @map("academy_id") @db.Uuid
+  assignmentId   String    @map("assignment_id") @db.Uuid
+  studentId      String    @map("student_id") @db.Uuid
+  submissionDate DateTime  @default(now()) @map("submission_date") @db.Timestamptz
+  mediaFileId    String    @map("media_file_id") @db.Uuid
+  studentRemarks String?   @map("student_remarks") @db.Text
+  status         String    @default("submitted") @db.VarChar(50)
+  marksObtained  Decimal?  @map("marks_obtained") @db.Decimal(6, 2)
+  teacherRemarks String?   @map("teacher_remarks") @db.Text
+  gradedBy       String?   @map("graded_by") @db.Uuid
+  gradedAt       DateTime? @map("graded_at") @db.Timestamptz
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy        Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  assignment     Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student        Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  grader         User?     @relation("gradedSubmissions", fields: [gradedBy], references: [id], onDelete: SetNull)
+
+  @@unique([assignmentId, studentId], name: "uq_assignment_submission")
+  @@map("assignment_submissions")
+}
+
+model Exam {
+  id          String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId   String      @map("academy_id") @db.Uuid
+  name        String      @db.VarChar(255)
+  description String?
+  examType    String      @default("term") @map("exam_type") @db.VarChar(100)
+  startDate   DateTime    @map("start_date") @db.Date
+  endDate     DateTime    @map("end_date") @db.Date
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime    @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime?   @map("deleted_at") @db.Timestamptz
+
+  academy     Academy     @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  papers      ExamPaper[]
+
+  @@map("exams")
+}
+
+model ExamPaper {
+  id               String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId        String       @map("academy_id") @db.Uuid
+  examId           String       @map("exam_id") @db.Uuid
+  subjectId        String       @map("subject_id") @db.Uuid
+  batchId          String       @map("batch_id") @db.Uuid
+  examDate         DateTime     @map("exam_date") @db.Date
+  startTime        String       @map("start_time") @db.VarChar(50)
+  durationMinutes  Int          @map("duration_minutes")
+  maxMarks         Decimal      @map("max_marks") @db.Decimal(6, 2)
+  passingMarks     Decimal      @map("passing_marks") @db.Decimal(6, 2)
+  questionPaperId  String?      @map("question_paper_id") @db.Uuid
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime     @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt        DateTime?    @map("deleted_at") @db.Timestamptz
+
+  academy          Academy      @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  exam             Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  subject          Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  batch            Batch        @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  results          ExamResult[]
+
+  @@map("exam_papers")
+}
+
+model ExamResult {
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId     String    @map("academy_id") @db.Uuid
+  examPaperId   String    @map("exam_paper_id") @db.Uuid
+  studentId     String    @map("student_id") @db.Uuid
+  marksObtained Decimal?  @map("marks_obtained") @db.Decimal(6, 2)
+  remarks       String?   @db.Text
+  status        String    @default("pass") @db.VarChar(50)
+  gradedBy      String?   @map("graded_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy       Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  examPaper     ExamPaper @relation(fields: [examPaperId], references: [id], onDelete: Cascade)
+  student       Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  grader        User?     @relation("gradedExamResults", fields: [gradedBy], references: [id], onDelete: SetNull)
+
+  @@unique([examPaperId, studentId], name: "uq_exam_result")
+  @@map("exam_results")
+}
+
+model Notification {
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId     String    @map("academy_id") @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  title         String    @db.VarChar(255)
+  message       String    @db.Text
+  type          String    @default("in_app") @db.VarChar(50)
+  status        String    @default("sent") @db.VarChar(50)
+  readAt        DateTime? @map("read_at") @db.Timestamptz
+  failureReason String?   @map("failure_reason") @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy       Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model NotificationTemplate {
+  id        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId String    @map("academy_id") @db.Uuid
+  name      String    @db.VarChar(100)
+  subject   String?   @db.VarChar(255)
+  body      String    @db.Text
+  type      String    @default("email") @db.VarChar(50)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy   Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
+
+  @@unique([academyId, name, type], name: "uq_template_name_type")
+  @@map("notification_templates")
+}
+
+model WebsitePage {
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId       String    @map("academy_id") @db.Uuid
+  title           String    @db.VarChar(255)
+  slug            String    @db.VarChar(255)
+  content         Json      @default("{}")
+  status          String    @default("draft") @db.VarChar(50)
+  metaTitle       String?   @map("meta_title") @db.VarChar(255)
+  metaDescription String?   @map("meta_description") @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy         Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
+
+  @@unique([academyId, slug], name: "uq_website_page_slug")
+  @@map("website_pages")
+}
+
+model GalleryAlbum {
+  id           String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId    String         @map("academy_id") @db.Uuid
+  title        String         @db.VarChar(255)
+  description  String?
+  coverImageId String?        @map("cover_image_id") @db.Uuid
+  isPublic     Boolean        @default(true) @map("is_public")
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime       @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime?      @map("deleted_at") @db.Timestamptz
+
+  academy      Academy        @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  images       GalleryImage[]
+
+  @@map("gallery_albums")
+}
+
+model GalleryImage {
+  id           String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId    String       @map("academy_id") @db.Uuid
+  albumId      String       @map("album_id") @db.Uuid
+  mediaFileId  String       @map("media_file_id") @db.Uuid
+  caption      String?      @db.Text
+  displayOrder Int          @default(0) @map("display_order")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime     @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime?    @map("deleted_at") @db.Timestamptz
+
+  academy      Academy      @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  album        GalleryAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+
+  @@map("gallery_images")
+}
+
+model Testimonial {
+  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId  String    @map("academy_id") @db.Uuid
+  authorName String    @map("author_name") @db.VarChar(255)
+  authorRole String    @map("author_role") @db.VarChar(150)
+  content    String    @db.Text
+  avatarId   String?   @map("avatar_id") @db.Uuid
+  rating     Int?
+  isFeatured Boolean   @default(false) @map("is_featured")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy    Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
+
+  @@map("testimonials")
+}
+
+model ContactEnquiry {
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId     String    @map("academy_id") @db.Uuid
+  name          String    @db.VarChar(255)
+  email         String    @db.VarChar(255)
+  phone         String    @db.VarChar(50)
+  subject       String?   @db.VarChar(255)
+  message       String    @db.Text
+  status        String    @default("pending") @db.VarChar(50)
+  responseNotes String?   @map("response_notes") @db.Text
+  resolvedBy    String?   @map("resolved_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy       Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  resolver      User?     @relation(fields: [resolvedBy], references: [id], onDelete: SetNull)
+
+  @@map("contact_enquiries")
+}
+
+model AdmissionEnquiry {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId        String    @map("academy_id") @db.Uuid
+  studentFirstName String    @map("student_first_name") @db.VarChar(150)
+  studentLastName  String    @map("student_last_name") @db.VarChar(150)
+  dateOfBirth      DateTime  @map("date_of_birth") @db.Date
+  courseId         String?   @map("course_id") @db.Uuid
+  parentName       String    @map("parent_name") @db.VarChar(255)
+  parentPhone      String    @map("parent_phone") @db.VarChar(50)
+  parentEmail      String?   @map("parent_email") @db.VarChar(255)
+  status           String    @default("pending") @db.VarChar(50)
+  remarks          String?   @db.Text
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy          Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  course           Course?   @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  @@map("admission_enquiries")
+}
+
+model DashboardCache {
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId    String    @map("academy_id") @db.Uuid
+  metricKey    String    @map("metric_key") @db.VarChar(100)
+  metricValue  Decimal   @map("metric_value") @db.Decimal(16, 4)
+  dimension    String?   @db.VarChar(100)
+  dimensionId  String?   @map("dimension_id") @db.Uuid
+  rawData      Json      @default("{}") @map("raw_data")
+  cachedUntil  DateTime  @map("cached_until") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy      Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
+
+  @@unique([academyId, metricKey, dimension, dimensionId], name: "uq_academy_metric_dimension")
+  @@map("dashboard_cache")
+}
+
+model MediaFile {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId        String    @map("academy_id") @db.Uuid
+  filename         String    @db.VarChar(255)
+  originalFilename String    @map("original_filename") @db.VarChar(255)
+  mimeType         String    @map("mime_type") @db.VarChar(100)
+  fileSize         BigInt    @map("file_size")
+  storagePath      String    @map("storage_path") @db.VarChar(512)
+  bucketName       String    @default("media") @map("bucket_name") @db.VarChar(100)
+  accessLevel      String    @default("private") @map("access_level") @db.VarChar(50)
+  uploadedBy       String?   @map("uploaded_by") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy          Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  uploader         User?     @relation(fields: [uploadedBy], references: [id], onDelete: SetNull)
+  studentPhotos    Student[] @relation("studentPhoto")
+  studentAadhaars  Student[] @relation("aadhaar")
+  studentMarksCards Student[] @relation("previousMarksCard")
+  studyMaterials   StudyMaterial[]
+
+  @@map("media_files")
+}
+
+model LoginActivity {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId         String?  @map("user_id") @db.Uuid
+  attemptedEmail String   @map("attempted_email") @db.VarChar(255)
+  status         String   @db.VarChar(50) // success or failed
+  ipAddress      String?  @map("ip_address") @db.VarChar(45)
+  userAgent      String?  @map("user_agent") @db.VarChar(512)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("login_activities")
+}
+
+model TeacherSubject {
+  id        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  academyId String    @map("academy_id") @db.Uuid
+  branchId  String    @map("branch_id") @db.Uuid
+  courseId  String    @map("course_id") @db.Uuid
+  subjectId String    @map("subject_id") @db.Uuid
+  batchId   String    @map("batch_id") @db.Uuid
+  teacherId String    @map("teacher_id") @db.Uuid
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  academy Academy @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  branch  Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  batch   Batch   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, subjectId, teacherId], name: "uq_teacher_subject_batch")
+  @@map("teacher_subjects")
+}

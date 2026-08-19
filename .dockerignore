@@ -1,0 +1,15 @@
+# Root DockerIgnore
+.git
+.gitignore
+.dockerignore
+**/node_modules
+**/.next
+**/dist
+**/.env*
+!**/.env.example
+**/coverage
+**/build
+**/.DS_Store
+*.md
+!DOCKER.md
+!DEPLOYMENT.md

@@ -1,0 +1,12 @@
+# Frontend DockerIgnore
+node_modules
+.next
+.git
+.gitignore
+.dockerignore
+.env
+.env.*
+! .env.example
+coverage
+*.log
+.DS_Store

@@ -1,0 +1,12 @@
+# Backend DockerIgnore
+node_modules
+dist
+.git
+.gitignore
+.dockerignore
+.env
+.env.*
+! .env.example
+coverage
+*.log
+.DS_Store
